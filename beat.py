@@ -6,7 +6,8 @@ import numpy as np
 import folium
 from geopy.distance import geodesic
 from streamlit_folium import st_folium
-from scipy.spatial.distance import cdist
+from scipy.spatial import distance_matrix
+
 from folium.plugins import AntPath
 import itertools
 import random
@@ -117,7 +118,7 @@ def optimize_single_beat(coords):
             return list(range(n))
 
         # Compute Euclidean distance matrix (faster than geodesic)
-        dist_matrix = cdist(coords, coords, metric='euclidean')
+        dist_matrix = distance_matrix(coords, coords)
         
         # Genetic algorithm parameters
         population_size = min(200, max(50, n * 2))
