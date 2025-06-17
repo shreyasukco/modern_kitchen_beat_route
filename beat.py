@@ -14,13 +14,22 @@ import random
 import json
 import traceback
 
+
+
 # ------------------- Page Config -------------------
 st.set_page_config(
     page_title="MODERN-KITCHEN BEAT MAP",
     layout="wide",
     initial_sidebar_state="expanded"
 )
-
+hide_streamlit_style = """
+    <style>
+    #MainMenu {visibility: hidden;}
+    footer {visibility: hidden;}
+    header {visibility: hidden;}
+    </style>
+    """
+st.markdown(hide_streamlit_style, unsafe_allow_html=True)
 # ------------------- Load Data -------------------
 @st.cache_data
 def load_data():
@@ -57,7 +66,7 @@ def create_map(df, marker_size=8):
         if "full_beat" in df.columns:
             df["full_beat"] = df["full_beat"].astype(str)
 
-        fig = px.scatter_map(
+        fig = px.scatter_mapbox(
             df,
             lat="lat",
             lon="longi",
