@@ -12,6 +12,9 @@ import traceback
 import os
 import random  # Essential for genetic algorithm operations
 
+# Define DATA_FILE constant
+DATA_FILE = "2025-06-16T12-18_export.csv"
+
 # ------------------- Authentication -------------------
 def load_authorized_users():
     """Load authorized users from JSON file"""
@@ -40,8 +43,6 @@ def authenticate_user():
         st.session_state.user_name = None
     
     if not st.session_state.authenticated:
-        # st.title("🔐 Modern-Kitchen Authentication")
-        
         with st.form("auth_form"):
             mobile_number = st.text_input("Enter your 10-digit mobile number", 
                                          placeholder="9876543210",
@@ -81,7 +82,7 @@ st.markdown(hide_streamlit_style, unsafe_allow_html=True)
 @st.cache_data
 def load_data():
     try:
-        dff = pd.read_csv("2025-06-16T12-18_export.csv")
+        dff = pd.read_csv(DATA_FILE)
 
         for col in dff.select_dtypes(include='object').columns:
             dff[col] = dff[col].astype(str).fillna("").replace("nan", "")
@@ -306,16 +307,23 @@ def main():
             margin-left: 10px;
             cursor: pointer;
         }
+        .rename-form {
+            background: #f8f9fa;
+            padding: 20px;
+            border-radius: 10px;
+            margin-bottom: 20px;
+            border: 1px solid #dee2e6;
+        }
         </style>
         """, unsafe_allow_html=True)
 
         # User info badge
-        st.markdown(f"""
-        <div class="user-info">
-            👤 {st.session_state.user_name} | {user_role.capitalize()}
-            <span class="logout-btn" onclick="window.location.href='?logout=true'">🔒 Logout</span>
-        </div>
-        """, unsafe_allow_html=True)
+        # st.markdown(f"""
+        # <div class="user-info">
+        #     👤 {st.session_state.user_name} | {user_role.capitalize()}
+        #     <span class="logout-btn" onclick="window.location.href='?logout=true'">🔒 Logout</span>
+        # </div>
+        # """, unsafe_allow_html=True)
         
         # Handle logout using modern st.query_params
         if st.query_params.get('logout'):
@@ -372,6 +380,63 @@ def main():
 
         # ADMIN FEATURES
         if is_admin:
+            # BEAT RENAMING SECTION
+            st.markdown("---")
+            st.markdown("### ✏️ Rename Beat")
+            
+            with st.container():
+
+                
+                col1, col2, col3 = st.columns([1, 2, 1])
+                
+                with col1:
+                    beat_to_rename = st.selectbox(
+                        "Select beat to rename",
+                        options=all_beats,
+                        index=0,
+                        key="beat_rename_select"
+                    )
+                
+                with col2:
+                    new_beat_name = st.text_input(
+                        "New beat name",
+                        placeholder="Enter new beat name",
+                        help="This will permanently replace the selected beat name",
+                        key="new_beat_name_input"
+                    )
+                
+                with col3:
+                    st.write("")  # For alignment
+                    st.write("")  # For alignment
+                    submitted = st.button("🚀 Rename Beat", key="rename_beat_button")
+                
+                if submitted:
+                    if not new_beat_name.strip():
+                        st.error("New beat name cannot be empty")
+                    elif beat_to_rename == new_beat_name:
+                        st.error("New name must be different from current name")
+                    else:
+                        try:
+                            # Update DataFrame
+                            df.loc[df['full_beat'] == beat_to_rename, 'full_beat'] = new_beat_name
+                            
+                            # Save to CSV
+                            df.to_csv(DATA_FILE, index=False)
+                            
+                            # Clear cache to force reload
+                            st.cache_data.clear()
+                            
+                            st.success(f"Successfully renamed '{beat_to_rename}' to '{new_beat_name}'")
+                            st.balloons()
+                            
+                            # Update UI immediately
+                            st.session_state.df = df
+                            st.rerun()
+                            
+                        except Exception as e:
+                            st.error(f"Error saving changes: {e}")
+                            st.error(traceback.format_exc())
+            
             # Show map
             st.markdown("### 🗺️ Outlet Locations by Beat")
             with st.spinner("Generating map visualization..."):
