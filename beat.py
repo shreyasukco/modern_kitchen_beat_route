@@ -10,17 +10,18 @@ from scipy.spatial import distance_matrix
 import json
 import traceback
 import os
-import random  # Essential for genetic algorithm operations
+import random
+from streamlit_extras.card import card
+from streamlit_extras.colored_header import colored_header
+from streamlit_extras.metric_cards import style_metric_cards
 
 # Define DATA_FILE constant
 DATA_FILE = "2025-06-16T12-18_export.csv"
 
 # ------------------- Authentication -------------------
 def load_authorized_users():
-    """Load authorized users from JSON file"""
     try:
         if not os.path.exists("authorized_users.json"):
-            # Create default admin if file doesn't exist
             default_users = {
                 "9483933659": {"name": "Admin User", "role": "admin"},
                 "6362253376": {"name": "Sales Rep", "role": "user"}
@@ -36,7 +37,6 @@ def load_authorized_users():
         return {}
 
 def authenticate_user():
-    """Authenticate user based on mobile number"""
     if 'authenticated' not in st.session_state:
         st.session_state.authenticated = False
         st.session_state.user_role = None
@@ -44,17 +44,19 @@ def authenticate_user():
     
     if not st.session_state.authenticated:
         with st.form("auth_form"):
+            # st.markdown("<h2 style='text-align:center;'>🔐 Modern-Kitchen Authentication</h2>", unsafe_allow_html=True)
             mobile_number = st.text_input("Enter your 10-digit mobile number", 
                                          placeholder="9876543210",
                                          max_chars=10)
             
-            if st.form_submit_button("Authenticate"):
+            if st.form_submit_button("Authenticate", use_container_width=True):
                 authorized_users = load_authorized_users()
                 if mobile_number in authorized_users:
                     st.session_state.authenticated = True
                     st.session_state.user_role = authorized_users[mobile_number]["role"]
                     st.session_state.user_name = authorized_users[mobile_number]["name"]
                     st.success(f"Welcome, {st.session_state.user_name}!")
+                    time.sleep(1)
                     st.rerun()
                 else:
                     st.error("You are not authorized to access this system. Please contact your administrator.")
@@ -66,7 +68,8 @@ def authenticate_user():
 st.set_page_config(
     page_title="MODERN-KITCHEN BEAT MAP",
     layout="wide",
-    initial_sidebar_state="expanded"
+    initial_sidebar_state="expanded",
+    page_icon="📍"
 )
 
 hide_streamlit_style = """
@@ -74,6 +77,58 @@ hide_streamlit_style = """
 #MainMenu {visibility: hidden;}
 footer {visibility: hidden;}
 header {visibility: hidden;}
+
+/* Custom styles */
+[data-testid="stAppViewContainer"] {
+    background: linear-gradient(135deg, #f5f7fa 0%, #e4edf5 100%);
+}
+[data-testid="stHeader"] {
+    background: rgba(255,255,255,0.1);
+}
+.css-1v0mbdj {
+    border-radius: 10px;
+    box-shadow: 0 4px 6px rgba(0,0,0,0.05);
+}
+.st-bw {
+    background-color: #ffffff;
+}
+.st-c7 {
+    background-color: #f0f2f6;
+}
+.stButton>button {
+    border-radius: 8px !important;
+    padding: 8px 16px !important;
+    transition: all 0.3s ease !important;
+}
+.stButton>button:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 8px rgba(0,0,0,0.1) !important;
+}
+.stDownloadButton>button {
+    background: linear-gradient(135deg, #0066cc, #003d8f) !important;
+    color: white !important;
+}
+.stAlert {
+    border-radius: 10px !important;
+}
+.css-1y4p8pa {
+    padding-top: 2rem;
+    padding-bottom: 2rem;
+}
+/* Custom card styling */
+.custom-card {
+    border-radius: 10px;
+    box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+    padding: 20px;
+    background: white;
+    margin-bottom: 20px;
+    border-left: 4px solid #0066cc;
+    transition: all 0.3s ease;
+}
+.custom-card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 6px 20px rgba(0,0,0,0.15);
+}
 </style>
 """
 st.markdown(hide_streamlit_style, unsafe_allow_html=True)
@@ -93,7 +148,6 @@ def load_data():
         dff = dff.dropna(subset=["lat", "longi"])
         dff = dff[(dff['lat'] != 0) | (dff['longi'] != 0)]
         
-        # Add unique ID for outlets
         dff["outlet_id"] = dff["outlet_name"] + "_" + dff["lat"].astype(str) + "_" + dff["longi"].astype(str)
         
         return dff
@@ -145,7 +199,6 @@ def create_map(df, marker_size=8):
 
 # ------------------- Route Optimization Functions -------------------
 def two_opt_improved(route, dist_matrix):
-    """Improved 2-opt algorithm with limited search window"""
     best = route.copy()
     improved = True
     while improved:
@@ -161,7 +214,6 @@ def two_opt_improved(route, dist_matrix):
     return best
 
 def route_distance_numba(route, dist_matrix):
-    """Calculate total distance of a route"""
     total = 0.0
     for i in range(len(route) - 1):
         total += dist_matrix[route[i], route[i+1]]
@@ -221,16 +273,23 @@ def optimize_single_beat(coords):
 def outlet_info_card(row):
     try:
         with st.expander(f"🔹 {row['sequence']}. {row['outlet_name']}", expanded=False):
-            st.markdown("#### Google Maps Link")
-            st.markdown(f"""
+            st.markdown("""
             <div style="margin-bottom:20px;">
-                <a href="{row['gmaps_link']}" target="_blank" style="text-decoration:none;">
-                    <button style="background:#198754; color:white; border:none; border-radius:4px; padding:8px 16px; cursor:pointer; width:100%;">
+                <a href="{gmaps_link}" target="_blank" style="text-decoration:none;">
+                    <button style="background:#198754; 
+                            color:white; 
+                            border:none; 
+                            border-radius:8px; 
+                            padding:10px 20px; 
+                            cursor:pointer; 
+                            width:100%;
+                            font-weight:bold;
+                            transition:all 0.3s ease;">
                         🗺️ Open in Google Maps
                     </button>
                 </a>
             </div>
-            """, unsafe_allow_html=True)
+            """.format(gmaps_link=row['gmaps_link']), unsafe_allow_html=True)
             
             col1, col2 = st.columns([1, 1])
             
@@ -243,7 +302,7 @@ def outlet_info_card(row):
                 st.markdown(f"**Owner NO**  \n{row['contact_no']}")
             
             with col2:
-                st.markdown("###### Location Information")
+                st.markdown("######Location Information")
                 st.markdown(f"**District**  \n{row['district']}")
                 st.markdown(f"**Taluka**  \n{row['taluka']}")
                 st.markdown(f"**PIN Code**  \n{row['pin_code']}")
@@ -260,72 +319,34 @@ def main():
         user_role = authenticate_user()
         is_admin = user_role == "admin"
         
-        # Custom CSS
-        st.markdown("""
-        <style>
-        .header-container {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 20px;
-            padding: 15px;
-            background: linear-gradient(135deg, #003d8f, #0066cc);
-            border-radius: 10px;
-            color: white;
-            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
-        }
-        .beat-header {
-            background: linear-gradient(135deg, #003d8f, #0066cc);
-            color: white;
-            padding: 15px 20px;
-            border-radius: 10px;
-            margin-bottom: 20px;
-            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
-        }
-        .info-card {
-            border: 1px solid #dee2e6;
-            border-radius: 10px;
-            padding: 20px;
-            margin-bottom: 20px;
-            background: #ffffff;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.05);
-        }
-        .user-info {
-            position: absolute;
-            top: 20px;
-            right: 20px;
-            background: rgba(0, 61, 143, 0.9);
-            color: white;
-            padding: 8px 15px;
-            border-radius: 20px;
-            font-size: 14px;
-            z-index: 1000;
-        }
-        .logout-btn {
-            color: white !important;
-            text-decoration: underline !important;
-            margin-left: 10px;
-            cursor: pointer;
-        }
-        .rename-form {
-            background: #f8f9fa;
-            padding: 20px;
-            border-radius: 10px;
-            margin-bottom: 20px;
-            border: 1px solid #dee2e6;
-        }
-        </style>
-        """, unsafe_allow_html=True)
-
         # User info badge
-        # st.markdown(f"""
-        # <div class="user-info">
-        #     👤 {st.session_state.user_name} | {user_role.capitalize()}
-        #     <span class="logout-btn" onclick="window.location.href='?logout=true'">🔒 Logout</span>
-        # </div>
-        # """, unsafe_allow_html=True)
+        # user_info = st.sidebar.container()
+        # with user_info:
+        #     st.sidebar.markdown(f"""
+        #     <div style="background: linear-gradient(135deg, #0066cc, #003d8f); 
+        #             color: white; 
+        #             padding: 15px; 
+        #             border-radius: 10px; 
+        #             margin-bottom: 20px;
+        #             text-align: center;">
+        #         <h3>👤 User Profile</h3>
+        #         <p><strong>Name:</strong> {st.session_state.user_name}</p>
+        #         <p><strong>Role:</strong> {user_role.capitalize()}</p>
+        #         <a href="?logout=true" style="color: white; text-decoration: none; display: inline-block; margin-top: 10px;">
+        #             <button style="background: rgba(255,255,255,0.2); 
+        #                     border: none; 
+        #                     border-radius: 20px; 
+        #                     padding: 8px 16px; 
+        #                     color: white;
+        #                     cursor: pointer;
+        #                     transition: all 0.3s ease;">
+        #                 🔒 Logout
+        #             </button>
+        #         </a>
+        #     </div>
+        #     """, unsafe_allow_html=True)
         
-        # Handle logout using modern st.query_params
+        # Handle logout
         if st.query_params.get('logout'):
             st.session_state.authenticated = False
             st.session_state.user_role = None
@@ -333,25 +354,40 @@ def main():
             st.rerun()
 
         # Main header
-        st.markdown("""
-        <div class="header-container">
-            <h1>📍 MODERN-KITCHEN: Outlet Beat Mapping</h1>
-        </div>
-        """, unsafe_allow_html=True)
+        colored_header(
+            label="📍 MODERN-KITCHEN: Outlet Beat Mapping",
+            description="Optimize sales routes and manage outlet territories",
+            color_name="blue-70",
+        )
+        
+        st.markdown("---")
 
         # Load data
-        with st.spinner("Loading outlet data..."):
+        with st.spinner("📊 Loading outlet data..."):
             df = load_data()
 
         if df.empty:
             st.warning("No outlet data loaded. Please check your data source.")
             return
 
+        # Stats cards
+        # if "full_beat" in df.columns:
+        #     total_outlets = len(df)
+        #     total_beats = len(df["full_beat"].unique())
+        #     avg_outlets = total_outlets // total_beats if total_beats > 0 else 0
+            
+        #     col1, col2, col3 = st.columns(3)
+        #     col1.metric("📋 Total Outlets", total_outlets)
+        #     col2.metric("🔢 Total Beats", total_beats)
+        #     col3.metric("📊 Avg Outlets/Beat", avg_outlets)
+        #     style_metric_cards(background_color="#FFFFFF", border_left_color="#0066CC")
+        #     st.markdown("---")
+
         # Filter container
         st.markdown("### 🔍 Filter Options")
-        col1, col2 = st.columns([3, 1])
+        filter_col1, filter_col2 = st.columns([3, 1])
         
-        with col1:
+        with filter_col1:
             all_beats = sorted(df["full_beat"].unique()) if "full_beat" in df.columns else []
             selected_beat = st.selectbox(
                 "Select a beat to view details",
@@ -359,18 +395,17 @@ def main():
                 index=0
             )
             
-        with col2:
+        with filter_col2:
             if is_admin:
-                st.markdown("### ⚙️ Map Settings")
                 marker_size = st.slider(
-                    "Marker size",
+                    "📍 Marker size",
                     min_value=3,
                     max_value=20,
                     value=8,
-                    label_visibility="collapsed"
+                    help="Adjust the size of markers on the map"
                 )
             else:
-                marker_size = 8  # Default size for non-admins
+                marker_size = 8
 
         # Apply beat filter
         if selected_beat == "All Beats":
@@ -381,15 +416,12 @@ def main():
         # ADMIN FEATURES
         if is_admin:
             # BEAT RENAMING SECTION
-            st.markdown("---")
-            st.markdown("### ✏️ Rename Beat")
-            
-            with st.container():
-
+            with st.expander("✏️ **Rename Beat**", expanded=False):
+                st.warning("This action will permanently rename the beat in the database. Proceed with caution.")
                 
-                col1, col2, col3 = st.columns([1, 2, 1])
+                rename_col1, rename_col2, rename_col3 = st.columns([1, 2, 1])
                 
-                with col1:
+                with rename_col1:
                     beat_to_rename = st.selectbox(
                         "Select beat to rename",
                         options=all_beats,
@@ -397,7 +429,7 @@ def main():
                         key="beat_rename_select"
                     )
                 
-                with col2:
+                with rename_col2:
                     new_beat_name = st.text_input(
                         "New beat name",
                         placeholder="Enter new beat name",
@@ -405,10 +437,13 @@ def main():
                         key="new_beat_name_input"
                     )
                 
-                with col3:
+                with rename_col3:
                     st.write("")  # For alignment
                     st.write("")  # For alignment
-                    submitted = st.button("🚀 Rename Beat", key="rename_beat_button")
+                    submitted = st.button("🚀 Rename Beat", 
+                                         key="rename_beat_button",
+                                         use_container_width=True,
+                                         type="primary")
                 
                 if submitted:
                     if not new_beat_name.strip():
@@ -426,18 +461,18 @@ def main():
                             # Clear cache to force reload
                             st.cache_data.clear()
                             
-                            st.success(f"Successfully renamed '{beat_to_rename}' to '{new_beat_name}'")
+                            st.success(f"✅ Successfully renamed '{beat_to_rename}' to '{new_beat_name}'")
                             st.balloons()
-                            
-                            # Update UI immediately
-                            st.session_state.df = df
+                            time.sleep(2)
                             st.rerun()
                             
                         except Exception as e:
                             st.error(f"Error saving changes: {e}")
                             st.error(traceback.format_exc())
             
-            # Show map
+            st.markdown("---")
+
+            # Map section
             st.markdown("### 🗺️ Outlet Locations by Beat")
             with st.spinner("Generating map visualization..."):
                 fig = create_map(df_display, marker_size=marker_size)
@@ -446,7 +481,7 @@ def main():
                 else:
                     st.warning("No valid location data to display.")
                     
-            # Show table of outlet count per beat
+            # Beat statistics
             st.markdown("### 📊 Outlet Count per Beat")
             if "full_beat" in df_display.columns:
                 beat_counts = (
@@ -455,11 +490,23 @@ def main():
                     .reset_index(name="Number of Outlets")
                     .sort_values("Number of Outlets", ascending=False)
                 )
-                st.dataframe(beat_counts, use_container_width=True)
+                st.dataframe(
+                    beat_counts, 
+                    use_container_width=True,
+                    column_config={
+                        "full_beat": "Beat Name",
+                        "Number of Outlets": st.column_config.NumberColumn(
+                            "Outlet Count",
+                            format="%d"
+                        )
+                    }
+                )
             else:
                 st.info("No beat information available in the dataset.")
                 
-            # Route Optimization (Admin only)
+            st.markdown("---")
+                
+            # Route Optimization
             st.markdown("### 🚗 Route Optimization")
             if selected_beat != "All Beats":
                 beat_df = df_display.copy()
@@ -485,7 +532,26 @@ def main():
                             
                             sorted_df["total_distance"] = total_distance
                             
-                            st.markdown(f"<div class='beat-header'><h3>Beat Details: {selected_beat}</h3></div>", unsafe_allow_html=True)
+                            # Beat header with stats
+                            st.markdown(f"""
+                            <div style="background: linear-gradient(135deg, #0066cc, #003d8f);
+                                    color: white;
+                                    padding: 20px;
+                                    border-radius: 10px;
+                                    margin-bottom: 20px;">
+                                <h3>Beat: {selected_beat}</h3>
+                                <div style="display: flex; gap: 20px; margin-top: 10px;">
+                                    <div>
+                                        <div style="font-size: 14px;">Total Outlets</div>
+                                        <div style="font-size: 24px; font-weight: bold;">{len(sorted_df)}</div>
+                                    </div>
+                                    <div>
+                                        <div style="font-size: 14px;">Route Distance</div>
+                                        <div style="font-size: 24px; font-weight: bold;">{total_distance:.2f} km</div>
+                                    </div>
+                                </div>
+                            </div>
+                            """, unsafe_allow_html=True)
                             
                             # Download button
                             st.markdown("### 💾 Download Beat Details")
@@ -500,21 +566,17 @@ def main():
                                     label="Download optimized beat details as CSV",
                                     data=csv,
                                     file_name=f"{selected_beat}_optimized_route.csv",
-                                    mime="text/csv"
+                                    mime="text/csv",
+                                    use_container_width=True
                                 )
                             except Exception as e:
                                 st.error(f"Error creating download file: {e}")
-                            
-                            # Show optimized sequence
-                            if "total_distance" in sorted_df.columns:
-                                total_distance = sorted_df["total_distance"].iloc[0]
-                                st.info(f"**Total Route Distance:** {total_distance:.2f} km")
                             
                             # Create two columns
                             col1, col2 = st.columns([1, 1])
                             
                             with col1:
-                                st.markdown("#### Outlet Details")
+                                st.markdown("#### 📋 Outlet Details")
                                 for i, row in sorted_df.iterrows():
                                     outlet_info_card(row)
                             
@@ -578,8 +640,22 @@ def main():
                 beat_df = df[df["full_beat"] == selected_beat].copy()
                 
                 if not beat_df.empty:
-                    st.markdown(f"### 📋 Outlets in Beat: {selected_beat}")
-                    st.markdown(f"**Total Outlets:** {len(beat_df)}")
+                    # Beat header
+                    st.markdown(f"""
+                    <div style="background: linear-gradient(135deg, #0066cc, #003d8f);
+                            color: white;
+                            padding: 20px;
+                            border-radius: 10px;
+                            margin-bottom: 20px;">
+                        <h3>Beat: {selected_beat}</h3>
+                        <div style="display: flex; gap: 20px; margin-top: 10px;">
+                            <div>
+                                <div style="font-size: 14px;">Total Outlets</div>
+                                <div style="font-size: 24px; font-weight: bold;">{len(beat_df)}</div>
+                            </div>
+                        </div>
+                    </div>
+                    """, unsafe_allow_html=True)
                     
                     # Add sequence number and Google Maps link
                     beat_df["sequence"] = range(1, len(beat_df) + 1)
@@ -588,6 +664,7 @@ def main():
                                           beat_df["longi"].astype(str)
                     
                     # Show outlet cards
+                    st.markdown("### 📋 Outlet Details")
                     for i, row in beat_df.iterrows():
                         outlet_info_card(row)
                 else:
