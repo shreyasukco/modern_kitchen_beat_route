@@ -572,7 +572,7 @@ def main():
                 
         # NON-ADMIN VIEW
         else:
-            st.info(f"👤 Welcome {st.session_state.user_name}. You have access to outlet details but not mapping features.")
+            st.info(f"👤 Welcome You have access to outlet details")
             
             if selected_beat != "All Beats":
                 beat_df = df[df["full_beat"] == selected_beat].copy()
