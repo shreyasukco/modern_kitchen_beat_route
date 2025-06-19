@@ -1,13 +1,13 @@
 import streamlit as st
 import pandas as pd
 import traceback
+from auth import AuthenticationManager  # Fixed import
+from data_loader import DataLoader  # Fixed import
+from route_optimizer import RouteOptimizer  # Fixed import
+from map_generator import MapGenerator  # Fixed import
+from ui_components import UIComponents  # Fixed import
+from admin import AdminPanel  # Fixed import
 from streamlit_folium import st_folium
-from auth import AuthenticationManager
-from data_loader import DataLoader
-from route_optimizer import RouteOptimizer
-from map_generator import MapGenerator
-from ui_components import UIComponents
-from admin import AdminPanel
 
 auth_manager = AuthenticationManager()
 data_loader = DataLoader()
@@ -27,14 +27,14 @@ def main():
     try:
         user_role = auth_manager.authenticate_user()
         is_admin = user_role == "admin"
-        user_name = st.session_state.user_name
         
+        if st.query_params.get('logout'):
+            st.session_state.authenticated = False
+            st.session_state.user_role = None
+            st.session_state.user_name = None
+            st.rerun()
+
         ui_components.create_main_header()
-        
-        # Display welcome message
-        st.success(f"👋 Welcome, {user_name}! You're logged in as {'Administrator' if is_admin else 'Field User'}")
-        if not is_admin:
-            st.info("Select your beat from the dropdown to view your outlet visit plan")
 
         try:
             with st.spinner("Loading outlet data..."):
@@ -78,21 +78,18 @@ def main():
         else:
             df_display = pd.DataFrame()
 
-        # Show map only for admins
-        if is_admin:
-            st.markdown("### 🗺️ Outlet Locations by Beat")
-            try:
-                with st.spinner("Generating map visualization..."):
-                    fig = map_generator.create_plotly_map(df_display, marker_size=9)
-                    if fig:
-                        st.plotly_chart(fig, use_container_width=True)
-                    else:
-                        st.warning("No valid location data to display.")
-            except Exception as e:
-                st.error(f"Map generation error: {e}")
+        st.markdown("### 🗺️ Outlet Locations by Beat")
+        try:
+            with st.spinner("Generating map visualization..."):
+                fig = map_generator.create_plotly_map(df_display, marker_size=9)
+                if fig:
+                    st.plotly_chart(fig, use_container_width=True)
+                else:
+                    st.warning("No valid location data to display.")
+        except Exception as e:
+            st.error(f"Map generation error: {e}")
                 
-        # ADMIN VIEW: Full route optimization features
-        if is_admin and not df_display.empty and selected_beat != "All Beats":
+        if not df_display.empty and selected_beat != "All Beats":
             st.markdown("### 🚗 Route Optimization")
             beat_df = df_display.copy()
             coords = beat_df[["lat", "longi"]].values
@@ -150,65 +147,6 @@ def main():
                     st.error(f"Route optimization error: {e}")            
             else:
                 st.warning(f"No outlets found for beat: {selected_beat}")
-                
-        # USER VIEW: Optimized outlet list with same style as admin
-        elif not is_admin and not df_display.empty and selected_beat != "All Beats":
-            st.markdown(f"<div class='beat-header'><h3>Beat: {selected_beat}</h3></div>", unsafe_allow_html=True)
-            
-            beat_df = df_display.copy()
-            coords = beat_df[["lat", "longi"]].values
-            
-            if len(coords) > 0:
-                try:
-                    with st.spinner(f"Optimizing visit order for {selected_beat}..."):
-                        route_order = route_optimizer.optimize_single_beat(coords)
-                        sorted_df = beat_df.iloc[route_order].copy()
-                        sorted_df.reset_index(drop=True, inplace=True)
-                        sorted_df["sequence"] = sorted_df.index + 1
-                        sorted_df["gmaps_link"] = "https://www.google.com/maps/search/?api=1&query=" + \
-                                                sorted_df["lat"].astype(str) + "," + \
-                                                sorted_df["longi"].astype(str)
-                        
-                        total_distance = route_optimizer.calculate_route_distance(sorted_df)
-                        
-                        st.info(f"**Total Route Distance:** {total_distance:.2f} km")
-                        st.info(f"**Number of Outlets:** {len(sorted_df)}")
-                        
-                        # Show optimized sequence in the same style as admin
-                        st.markdown("#### Outlet Visit Plan")
-                        for i, row in sorted_df.iterrows():
-                            ui_components.outlet_info_card(row)
-                        
-                        # Download button for user
-                        st.markdown("### 💾 Download Visit Plan")
-                        try:
-                            download_df = sorted_df.copy()
-                            if "geometry" in download_df.columns:
-                                download_df = download_df.drop(columns=["geometry"])
-                            
-                            # Keep only essential columns for users
-                            user_columns = [
-                                "sequence", "outlet_name", "type_name", "owner_name", 
-                                "contact_no", "street_address", "landmark", "gmaps_link"
-                            ]
-                            download_df = download_df[user_columns]
-                            
-                            csv = download_df.to_csv(index=False).encode('utf-8')
-                            
-                            st.download_button(
-                                label="Download visit plan as CSV",
-                                data=csv,
-                                file_name=f"{selected_beat}_visit_plan.csv",
-                                mime="text/csv"
-                            )
-                        except Exception as e:
-                            st.error(f"Error creating download file: {e}")
-                except Exception as e:
-                    st.error(f"Error optimizing visit order: {e}")            
-            else:
-                st.warning(f"No outlets found for beat: {selected_beat}")
-        # elif not is_admin:
-        #     st.info("👆 Select a beat to view your outlet visit plan")
                 
     except Exception as e:
         st.error(f"Unexpected application error: {e}")

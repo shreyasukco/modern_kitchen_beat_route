@@ -1,2 +1,51 @@
-{"9483933659": {"name": "Admin User", "role": "admin"}, "6362253376": {"name": "Sales Rep", "role": "user"},"8867651824": {"name": "Admin User", "role": "admin"},
-"9886658917": {"name": "Admin User", "role": "admin"}}
+{
+  "9483933659": {
+    "name": "Admin User",
+    "role": "admin",
+    "assigned_beats": []
+  },
+  "6362253376": {
+    "name": "Sales Rep",
+    "role": "user",
+    "assigned_beats": [
+      "11",
+      "16",
+      "15",
+      "17",
+      "14",
+      "18",
+      "19"
+    ]
+  },
+  "8867651824": {
+    "name": "Admin User",
+    "role": "admin",
+    "assigned_beats": []
+  },
+  "9886658917": {
+    "name": "Admin User",
+    "role": "admin",
+    "assigned_beats": []
+  },
+  "6362253371": {
+    "name": "shreyas",
+    "role": "user",
+    "assigned_beats": [
+      "15",
+      "17",
+      "16",
+      "18",
+      "14",
+      "11"
+    ]
+  },
+  "6362253379": {
+    "name": "sron410",
+    "role": "user",
+    "assigned_beats": [
+      "4A",
+      "49",
+      "48"
+    ]
+  }
+}
