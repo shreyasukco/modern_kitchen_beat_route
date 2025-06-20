@@ -171,7 +171,7 @@ def main():
                         
                         total_distance = route_optimizer.calculate_route_distance(sorted_df)
                         
-                        st.info(f"**Total Route Distance:** {total_distance:.2f} km")
+                        st.info(f"**Total Minimum Route Distance:** {total_distance:.2f} km")
                         st.info(f"**Number of Outlets:** {len(sorted_df)}")
                         
                         # Show optimized sequence in the same style as admin
