@@ -8,6 +8,7 @@ from route_optimizer import RouteOptimizer
 from map_generator import MapGenerator
 from ui_components import UIComponents
 from admin import AdminPanel
+import time
 
 auth_manager = AuthenticationManager()
 data_loader = DataLoader()
@@ -28,11 +29,33 @@ def main():
         user_role = auth_manager.authenticate_user()
         is_admin = user_role == "admin"
         user_name = st.session_state.user_name
-        
+
         ui_components.create_main_header()
-        
-        # Display welcome message
-        st.success(f"👋 Welcome, {user_name}! You're logged in as {'Administrator' if is_admin else 'Field User'}")
+
+        # Custom green-styled welcome message (shown only once per session)
+        if "welcome_shown" not in st.session_state:
+            welcome_placeholder = st.empty()
+            welcome_placeholder.markdown(
+                f"""
+                <div style='
+                    padding: 1rem;
+                    background-color: #eafaf1;
+                    border-left: 5px solid #2ecc71;
+                    border-radius: 5px;
+                    color: #2c662d;
+                    font-weight: 500;
+                '>
+                    👋 Welcome, <strong>{user_name}</strong>! You're logged in as 
+                    <strong>{'Administrator' if is_admin else 'Field User'}</strong>.
+                </div>
+                """,
+                unsafe_allow_html=True
+            )
+            time.sleep(1)  # Show the message for 2 seconds
+            welcome_placeholder.empty()
+            st.session_state.welcome_shown = True
+
+        # Persistent info message for non-admins
         if not is_admin:
             st.info("Select your beat from the dropdown to view your outlet visit plan")
 
