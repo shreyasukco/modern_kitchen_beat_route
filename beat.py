@@ -57,19 +57,19 @@ def main():
         st.markdown("##### Filter Options")
         col1, col2 = st.columns([3, 1])
 
-        with col1:
-            if is_admin:
-                all_beats = sorted(df["full_beat"].unique()) if "full_beat" in df.columns else []
-            else:
-                all_beats = st.session_state.assigned_beats
-            
-            options_list = ["All Beats"] + all_beats if all_beats else ["All Beats"]
-            
-            selected_beat = st.selectbox(
-                "Select a beat to view details",
-                options=options_list,
-                index=0
-            )
+
+        if is_admin:
+            all_beats = sorted(df["full_beat"].unique()) if "full_beat" in df.columns else []
+        else:
+            all_beats = st.session_state.assigned_beats
+
+        options_list = ["All Beats"] + all_beats if all_beats else ["All Beats"]
+
+        selected_beat = st.selectbox(
+            "Select a beat to view details",
+            options=options_list,
+            index=0
+        )
 
         if selected_beat == "All Beats" and all_beats:
             df_display = df[df["full_beat"].isin(all_beats)] if not is_admin else df
@@ -130,7 +130,7 @@ def main():
                         except Exception as e:
                             st.error(f"CSV export error: {e}")
                         
-                        st.info(f"**Total Route Distance:** {total_distance:.2f} km")
+                        st.info(f"**Total Minimum Route Distance:** {total_distance:.2f} km")
                         
                         col1, col2 = st.columns([1, 1])
                         

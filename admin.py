@@ -8,6 +8,12 @@ class AdminPanel:
         self.df = df
         self.auth_manager = AuthenticationManager()
         self.reset_user_management_state()
+        
+        # Initialize session state keys for beat renaming
+        if 'beat_renaming_selected_beat' not in st.session_state:
+            st.session_state.beat_renaming_selected_beat = ''
+        if 'beat_renaming_new_name' not in st.session_state:
+            st.session_state.beat_renaming_new_name = ''
 
     def reset_user_management_state(self):
         """Reset user management form state after successful operations"""
@@ -21,36 +27,65 @@ class AdminPanel:
             }
 
     def beat_renaming(self):
+        # Define session state key for selected beat
+        SELECTED_BEAT_KEY = "beat_renaming_selected_beat"
+        
         with st.expander("✏️ Rename Beat", expanded=False):
             all_beats = sorted(self.df["full_beat"].unique()) if "full_beat" in self.df.columns else []
             
             if not all_beats:
                 st.info("No beats available for renaming")
+                if SELECTED_BEAT_KEY in st.session_state:
+                    del st.session_state[SELECTED_BEAT_KEY]
                 return
                 
-            beat_to_rename = st.selectbox(
-                "Select beat to rename",
-                options=all_beats,
-                index=0
-            )
+            # Initialize or reset selected beat
+            if SELECTED_BEAT_KEY not in st.session_state or st.session_state[SELECTED_BEAT_KEY] not in all_beats:
+                st.session_state[SELECTED_BEAT_KEY] = all_beats[0]
             
-            new_beat_name = st.text_input(
-                "New beat name",
-                placeholder="Enter new beat name"
-            )
+            # Create a form to avoid direct widget state modification
+            with st.form("beat_rename_form"):
+                beat_to_rename = st.selectbox(
+                    "Select beat to rename",
+                    options=all_beats,
+                    index=all_beats.index(st.session_state[SELECTED_BEAT_KEY])
+                )
+                
+                new_beat_name = st.text_input(
+                    "New beat name",
+                    placeholder="Enter new beat name"
+                ).strip()
+                
+                submit_button = st.form_submit_button("🚀 Rename Beat")
             
-            if st.button("🚀 Rename Beat"):
-                if not new_beat_name.strip():
+            if submit_button:
+                # Validation checks
+                if not new_beat_name:
                     st.error("New beat name cannot be empty")
                 elif beat_to_rename == new_beat_name:
                     st.error("New name must be different from current name")
+                elif new_beat_name in all_beats:
+                    st.error("A beat with this name already exists. Please choose a different name.")
                 else:
                     try:
+                        # Perform rename operation
                         self.df.loc[self.df['full_beat'] == beat_to_rename, 'full_beat'] = new_beat_name
                         self.df.to_csv(DATA_FILE, index=False)
                         st.cache_data.clear()
+                        
+                        # Show success message
                         st.success(f"Successfully renamed '{beat_to_rename}' to '{new_beat_name}'")
-                        st.balloons()
+                        
+                        # Update beat list
+                        updated_beats = sorted(self.df["full_beat"].unique())
+                        
+                        # Reset selected beat to first in updated list
+                        if updated_beats:
+                            st.session_state[SELECTED_BEAT_KEY] = updated_beats[0]
+                        else:
+                            del st.session_state[SELECTED_BEAT_KEY]
+                        
+                        # Rerun to refresh state
                         st.rerun()
                     except Exception as e:
                         raise AdminError(f"Beat renaming failed: {e}")
